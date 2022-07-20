@@ -33,6 +33,8 @@ typedef struct {
     lv_timer_t * timer;
     lv_img_dsc_t imgdsc;
     uint32_t last_call;
+    uint32_t delay;
+    uint32_t speed;
 } lv_gif_t;
 
 extern const lv_obj_class_t lv_gif_class;
@@ -43,6 +45,8 @@ extern const lv_obj_class_t lv_gif_class;
 
 lv_obj_t * lv_gif_create(lv_obj_t * parent);
 void lv_gif_set_src(lv_obj_t * obj, const void * src);
+void lv_gif_set_delay(lv_obj_t * obj, uint32_t delay);
+void lv_gif_set_speed(lv_obj_t * obj, uint32_t speed);
 void lv_gif_restart(lv_obj_t * gif);
 
 /**********************
