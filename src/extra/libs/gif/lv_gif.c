@@ -15,6 +15,7 @@
  *      DEFINES
  *********************/
 #define MY_CLASS    &lv_gif_class
+#define  NEXT_FRAME_PERIOD_MS   10
 
 /**********************
  *      TYPEDEFS
@@ -27,6 +28,7 @@
 static void lv_gif_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj);
 static void lv_gif_destructor(const lv_obj_class_t * class_p, lv_obj_t * obj);
 static void next_frame_task_cb(lv_timer_t * t);
+static void start_delay(lv_timer_t * t);
 
 /**********************
  *  STATIC VARIABLES
@@ -88,11 +90,29 @@ void lv_gif_set_src(lv_obj_t * obj, const void * src)
 
     lv_img_set_src(obj, &gifobj->imgdsc);
 
-    lv_timer_resume(gifobj->timer);
-    lv_timer_reset(gifobj->timer);
+    if(gifobj->delay) {
+        lv_timer_resume(gifobj->timer);
+        lv_timer_reset(gifobj->timer);
+        lv_timer_set_cb(gifobj->timer, start_delay);
+        lv_timer_set_period(gifobj->timer, gifobj->delay);
+        next_frame_task_cb(gifobj->timer);
+    } else {
+        lv_timer_resume(gifobj->timer);
+        lv_timer_reset(gifobj->timer);
+        next_frame_task_cb(gifobj->timer);
+    }
+}
 
-    next_frame_task_cb(gifobj->timer);
+void lv_gif_set_delay(lv_obj_t * obj, uint32_t delay)
+{
+    lv_gif_t * gifobj = (lv_gif_t *) obj;
+    gifobj->delay = delay;
+}
 
+void lv_gif_set_speed(lv_obj_t * obj, uint32_t speed)
+{
+    lv_gif_t * gifobj = (lv_gif_t *) obj;
+    gifobj->speed = speed;
 }
 
 void lv_gif_restart(lv_obj_t * obj)
@@ -111,7 +131,7 @@ static void lv_gif_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
 
     lv_gif_t * gifobj = (lv_gif_t *) obj;
 
-    gifobj->timer = lv_timer_create(next_frame_task_cb, 10, obj);
+    gifobj->timer = lv_timer_create(next_frame_task_cb, NEXT_FRAME_PERIOD_MS, obj);
     lv_timer_pause(gifobj->timer);
 }
 
@@ -129,7 +149,14 @@ static void next_frame_task_cb(lv_timer_t * t)
     lv_obj_t * obj = t->user_data;
     lv_gif_t * gifobj = (lv_gif_t *) obj;
     uint32_t elaps = lv_tick_elaps(gifobj->last_call);
-    if(elaps < gifobj->gif->gce.delay * 10) return;
+
+    if(gifobj->speed) {
+        float speed = gifobj->speed;
+        float percentage = 100;
+        if(elaps < gifobj->gif->gce.delay * 10 / (speed/percentage)) return;
+    } else {
+        if(elaps < gifobj->gif->gce.delay * 10) return;
+    }
 
     gifobj->last_call = lv_tick_get();
 
@@ -150,6 +177,17 @@ static void next_frame_task_cb(lv_timer_t * t)
 
     lv_img_cache_invalidate_src(lv_img_get_src(obj));
     lv_obj_invalidate(obj);
+}
+
+static void start_delay(lv_timer_t * t)
+{
+//    lv_timer_resume(t);
+//    lv_timer_reset(t);
+
+    lv_timer_set_cb(t, next_frame_task_cb);
+    lv_timer_set_period(t, NEXT_FRAME_PERIOD_MS);
+
+//    next_frame_task_cb(t);
 }
 
 #endif /*LV_USE_GIF*/
